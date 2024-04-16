@@ -41,6 +41,7 @@ android {
     }
     buildFeatures {
         compose = true
+        viewBinding = true
     }
     composeOptions {
         kotlinCompilerExtensionVersion = "1.5.1"
@@ -63,6 +64,12 @@ dependencies {
     implementation(libs.androidx.ui.tooling.preview)
     implementation(libs.androidx.material3)
     implementation(libs.firebase.auth)
+    implementation(libs.androidx.appcompat)
+    implementation(libs.material)
+    implementation(libs.androidx.constraintlayout)
+    implementation(libs.androidx.lifecycle.livedata.ktx)
+    implementation(libs.androidx.navigation.fragment.ktx)
+    implementation(libs.androidx.navigation.ui.ktx)
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
@@ -80,4 +87,26 @@ dependencies {
     implementation ("androidx.lifecycle:lifecycle-runtime-compose:2.7.0")
     implementation ("androidx.navigation:navigation-compose:2.7.7")
     implementation ("io.coil-kt:coil-compose:2.2.2")
+
+    //retrofit
+    implementation ("com.squareup.retrofit2:retrofit:2.9.0")
+
+    //gson converter
+    implementation ("com.squareup.retrofit2:converter-gson:2.9.0")
+
+    //picasso for converting image link given into API
+    implementation ("com.squareup.picasso:picasso:2.8")
+
+    //coroutines
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.0")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.8.0")
+
+    dependencies {
+        implementation("androidx.compose.ui:ui:1.6.5")
+        implementation("androidx.compose.runtime:runtime-livedata:1.6.5")
+        // Other Jetpack Compose dependencies as needed
+
+        implementation("androidx.lifecycle:lifecycle-livedata-ktx:2.4.0") // For LiveData support
+    }
+
 }
