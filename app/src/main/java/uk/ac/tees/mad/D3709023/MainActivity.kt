@@ -12,12 +12,15 @@ import androidx.activity.result.IntentSenderRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
@@ -111,58 +114,6 @@ class MainActivity : ComponentActivity() {
                     color = MaterialTheme.colorScheme.background
                 ) {
                     val navController = rememberNavController()
-//                    NavHost(navController = navController, startDestination = "sign_in") {
-//                        composable("sign_in") {
-//                            val viewModel = viewModel<SignInViewModel>()
-//                            val state by viewModel.state.collectAsStateWithLifecycle()
-//
-////                            LaunchedEffect(key1 = Unit) {
-////                                if (googleAuthUIClient.getSignedInUser() != null) {
-////                                    navController.navigate("profile")
-////                                }
-////                            }
-//
-//                            val launcher = rememberLauncherForActivityResult(
-//                                contract = ActivityResultContracts.StartIntentSenderForResult(),
-//
-//                                onResult = { result ->
-//                                    if (result.resultCode == RESULT_OK) {
-//                                        lifecycleScope.launch {
-//                                            val signInResult = googleAuthUIClient.signInWithIntent(
-//                                                intent = result.data ?: return@launch
-//                                            )
-//                                            viewModel.onSignInResult(signInResult)
-//                                        }
-//                                    }
-//                                }
-//                            )
-//                            LaunchedEffect(key1 = state.isSignInSuccessful) {
-//                                if (state.isSignInSuccessful) {
-//                                    Toast.makeText(
-//                                        applicationContext,
-//                                        "Sign In Successfull",
-//                                        Toast.LENGTH_LONG
-//                                    ).show()
-//
-////                                    navController.navigate("profile")
-//                                    viewModel.resetState()
-//                                }
-//                            }
-//
-//                            SignInScreen(state = state,
-//                                onSignInClick = {
-//                                    lifecycleScope.launch {
-//                                        val signInIntentSender = googleAuthUIClient.signIn()
-//                                        launcher.launch(
-//                                            IntentSenderRequest.Builder(
-//                                                signInIntentSender ?: return@launch
-//                                            ).build()
-//                                        )
-//                                    }
-//                                }
-//                            )
-
-
                     NavHost(navController = navController, startDestination = "sign_in") {
                         composable("sign_in") {
                             // Sign-in logic, navigates to "music_display" on success
@@ -330,7 +281,21 @@ fun MusicDisplayScreen(musicViewModel: MusicViewModel) {
     val isLoading by musicViewModel.isLoading.observeAsState()
     val error by musicViewModel.error.observeAsState()
 
-    Box(music, isLoading = isLoading == true, error = error)
+//    Box(music, isLoading = isLoading == true, error = error)
+    LazyColumn(
+        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        music?.data?.forEach { data ->
+            item {
+                Box(
+                    music = MyData(data = listOf(data), next = "", total = 1),
+                    isLoading = isLoading == true,
+                    error = error
+                )
+            }
+        }
+    }
 }
 
 
