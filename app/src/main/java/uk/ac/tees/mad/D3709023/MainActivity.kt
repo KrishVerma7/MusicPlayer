@@ -111,6 +111,58 @@ class MainActivity : ComponentActivity() {
                     color = MaterialTheme.colorScheme.background
                 ) {
                     val navController = rememberNavController()
+//                    NavHost(navController = navController, startDestination = "sign_in") {
+//                        composable("sign_in") {
+//                            val viewModel = viewModel<SignInViewModel>()
+//                            val state by viewModel.state.collectAsStateWithLifecycle()
+//
+////                            LaunchedEffect(key1 = Unit) {
+////                                if (googleAuthUIClient.getSignedInUser() != null) {
+////                                    navController.navigate("profile")
+////                                }
+////                            }
+//
+//                            val launcher = rememberLauncherForActivityResult(
+//                                contract = ActivityResultContracts.StartIntentSenderForResult(),
+//
+//                                onResult = { result ->
+//                                    if (result.resultCode == RESULT_OK) {
+//                                        lifecycleScope.launch {
+//                                            val signInResult = googleAuthUIClient.signInWithIntent(
+//                                                intent = result.data ?: return@launch
+//                                            )
+//                                            viewModel.onSignInResult(signInResult)
+//                                        }
+//                                    }
+//                                }
+//                            )
+//                            LaunchedEffect(key1 = state.isSignInSuccessful) {
+//                                if (state.isSignInSuccessful) {
+//                                    Toast.makeText(
+//                                        applicationContext,
+//                                        "Sign In Successfull",
+//                                        Toast.LENGTH_LONG
+//                                    ).show()
+//
+////                                    navController.navigate("profile")
+//                                    viewModel.resetState()
+//                                }
+//                            }
+//
+//                            SignInScreen(state = state,
+//                                onSignInClick = {
+//                                    lifecycleScope.launch {
+//                                        val signInIntentSender = googleAuthUIClient.signIn()
+//                                        launcher.launch(
+//                                            IntentSenderRequest.Builder(
+//                                                signInIntentSender ?: return@launch
+//                                            ).build()
+//                                        )
+//                                    }
+//                                }
+//                            )
+
+
                     NavHost(navController = navController, startDestination = "sign_in") {
                         composable("sign_in") {
                             // Sign-in logic, navigates to "music_display" on success
@@ -118,11 +170,11 @@ class MainActivity : ComponentActivity() {
                             val state by viewModel.state.collectAsStateWithLifecycle()
 
 
-//                            LaunchedEffect(key1 = Unit) {
-//                                if (googleAuthUIClient.getSignedInUser() != null) {
-//                                    navController.navigate("profile")
-//                                }
-//                            }
+                            LaunchedEffect(key1 = Unit) {
+                                if (googleAuthUIClient.getSignedInUser() != null) {
+                                    navController.navigate("music_display")
+                                }
+                            }
 
                             val launcher = rememberLauncherForActivityResult(
                                 contract = ActivityResultContracts.StartIntentSenderForResult(),
@@ -148,7 +200,7 @@ class MainActivity : ComponentActivity() {
                                         "Sign In Successfully",
                                         Toast.LENGTH_LONG
                                     ).show()
-                                    navController.navigate("music_display") {
+                                    navController.navigate("profile") {
                                         popUpTo("sign_in") {
                                             inclusive = true
                                         }  // Clear backstack up to sign-in
@@ -186,6 +238,7 @@ class MainActivity : ComponentActivity() {
                                     }
                                 }
                             )
+                            navController.navigate("music_display")
                         }
                         composable("music_display") {
                             // Music data display logic
@@ -194,24 +247,6 @@ class MainActivity : ComponentActivity() {
                         }
                     }
                 }
-
-
-//                        composable("profile") {
-//                            ProfileScreen(userData = googleAuthUIClient.getSignedInUser(),
-//                                onSignOut = {
-//                                    lifecycleScope.launch {
-//                                        googleAuthUIClient.signOut()
-//                                        Toast.makeText(
-//                                            applicationContext,
-//                                            "Signed Out",
-//                                            Toast.LENGTH_LONG
-//                                        ).show()
-//                                        navController.popBackStack()
-//                                    }
-//                                }
-//                            )
-//                        }
-
             }
         }
     }
