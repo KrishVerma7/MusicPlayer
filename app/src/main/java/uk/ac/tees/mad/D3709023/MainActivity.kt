@@ -280,13 +280,6 @@ fun MusicDisplayScreen(musicViewModel: MusicViewModel) {
 
     LaunchedEffect(true) {
         musicViewModel.fetchMusic()
-        musicData.value = listOf(
-            Data(
-                Album("Sample Album", "Sample Title"),
-                "http://example.com/sample.mp3",
-                "Sample Track"
-            )
-        )
         isLoading.value = false
     }
 
@@ -313,7 +306,7 @@ fun BoxPreview() {
         data = listOf(
             Data(
                 album = Album("cover_image_url", "sample title"),
-                title = "Sample Music Title",
+                title = "Music Title",
                 preview = "http://sampleurl.com/sample.mp3" // Replace with actual preview URL
             )
         ),
