@@ -8,7 +8,7 @@
             <InsightsFilterSettings>
               <option name="connection">
                 <ConnectionSetting>
-                  <option name="appId" value="com.example.musicplayer" />
+                  <option name="appId" value="uk.ac.tees.mad.D3709023" />
                   <option name="mobileSdkAppId" value="1:332659691694:android:9b5269eda66e7bdebe9d3f" />
                   <option name="projectId" value="musicapp-e956e" />
                   <option name="projectNumber" value="332659691694" />
