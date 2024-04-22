@@ -70,6 +70,7 @@ dependencies {
     implementation(libs.androidx.navigation.fragment.ktx)
     implementation(libs.androidx.navigation.ui.ktx)
     implementation(libs.firebase.storage)
+    implementation(libs.play.services.location)
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
@@ -104,11 +105,12 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.8.0")
 
 
-    implementation("androidx.compose.ui:ui:1.6.5")
+    implementation("androidx.compose.ui:ui:1.6.6")
     implementation("androidx.compose.runtime:runtime-livedata:1.6.5")
     // Other Jetpack Compose dependencies as needed
 
-    implementation("androidx.lifecycle:lifecycle-livedata-ktx:2.4.0") // For LiveData support
+
+
 
 
 }
