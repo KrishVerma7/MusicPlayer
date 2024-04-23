@@ -9,6 +9,7 @@ import android.location.Geocoder
 import android.net.Uri
 import android.os.Looper
 import android.util.Log
+import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
@@ -24,9 +25,11 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -39,7 +42,6 @@ import androidx.compose.ui.unit.sp
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import coil.compose.AsyncImage
-import com.google.android.gms.auth.api.signin.GoogleSignIn.hasPermissions
 import com.google.android.gms.location.FusedLocationProviderClient
 import com.google.android.gms.location.LocationCallback
 import com.google.android.gms.location.LocationRequest
@@ -47,11 +49,15 @@ import com.google.android.gms.location.LocationResult
 import com.google.android.gms.location.LocationServices
 import com.google.firebase.storage.FirebaseStorage
 import uk.ac.tees.mad.D3709023.sign_in.UserData
-import java.io.ByteArrayOutputStream
 import java.io.IOException
 import java.util.Locale
 import java.util.concurrent.TimeUnit
-import androidx.compose.ui.tooling.preview.Preview
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.tasks.await
+import kotlinx.coroutines.withContext
+import java.io.File
 
 
 /**
@@ -77,22 +83,6 @@ fun getUserLocation(activity: Activity): LatandLong {
         locationCallback = object : LocationCallback() {
             override fun onLocationResult(result: LocationResult) {
 
-                /**
-                 * Option 1
-                 * This option returns the locations computed, ordered from oldest to newest.
-                 * */
-//                for (location in result.locations) {
-//                    // Update data class with location data
-//                    currentUserLocation = LatandLong(location.latitude, location.longitude)
-//                    Log.d(LOCATION_TAG, "${location.latitude},${location.longitude}")
-//                }
-
-
-                /**
-                 * Option 2
-                 * This option returns the most recent historical location currently available.
-                 * Will return null if no historical location is available
-                 * */
                 locationProvider.lastLocation
                     .addOnSuccessListener { location ->
                         location?.let {
@@ -108,19 +98,6 @@ fun getUserLocation(activity: Activity): LatandLong {
 
             }
         }
-//        if (hasPermissions(
-//                context,
-//                Manifest.permission.ACCESS_FINE_LOCATION,
-//                Manifest.permission.ACCESS_COARSE_LOCATION
-//            )
-//        ) {
-//            locationUpdate()
-//        } else {
-//            askPermissions(
-//                context, REQUEST_LOCATION_PERMISSION, Manifest.permission.ACCESS_FINE_LOCATION,
-//                Manifest.permission.ACCESS_COARSE_LOCATION
-//            )
-//        }
 
         if (ContextCompat.checkSelfPermission(
                 activity,
@@ -169,31 +146,42 @@ fun stopLocationUpdate() {
 
 @SuppressLint("MissingPermission")
 fun locationUpdate() {
-    locationCallback.let {
-        //An encapsulation of various parameters for requesting
-        // location through FusedLocationProviderClient.
-        val locationRequest: LocationRequest =
-            LocationRequest.create().apply {
-                interval = TimeUnit.SECONDS.toMillis(60)
-                fastestInterval = TimeUnit.SECONDS.toMillis(30)
-                maxWaitTime = TimeUnit.MINUTES.toMillis(2)
-                priority = LocationRequest.PRIORITY_HIGH_ACCURACY
+    CoroutineScope(Dispatchers.IO).launch {
+        locationProvider.lastLocation.addOnSuccessListener{location->
+            location?.let{
+                Log.d("LOCATION_TAG","last known location: ${location.longitude}")
             }
-        //use FusedLocationProviderClient to request location update
-        locationProvider.requestLocationUpdates(
-            locationRequest,
-            it,
-            Looper.getMainLooper()
-        )
+        }.addOnFailureListener{
+            Log.e("LOCATION_TAG","Failed to fetch last location: ${it.message}")
+        }
     }
 
+    val locationRequest:LocationRequest = LocationRequest.create().apply {
+        interval = TimeUnit.SECONDS.toMillis(10)
+        fastestInterval= TimeUnit.SECONDS.toMillis(5)
+        maxWaitTime = TimeUnit.MINUTES.toMillis(1)
+        priority = LocationRequest.PRIORITY_HIGH_ACCURACY
+    }
+
+    CoroutineScope(Dispatchers.IO).launch {
+        try {
+            locationProvider.requestLocationUpdates(
+                locationRequest,
+                locationCallback,
+                Looper.getMainLooper()
+            ).await()
+            Log.d("LOCATION_TAG","Location updates started.")
+        }catch (e:Exception){
+            Log.e("LOCATION_TAG","Exception setting up location updates: ${e.message}")
+            e.printStackTrace()
+        }
+    }
 }
 
 data class LatandLong(
     val latitude: Double = 0.0,
     val longitude: Double = 0.0
 )
-
 
 fun getReadableLocation(latitude: Double, longitude: Double, context: Context): String {
     var addressText = ""
@@ -219,6 +207,48 @@ fun getReadableLocation(latitude: Double, longitude: Double, context: Context): 
 
 }
 
+fun saveUserLocation(context: Context, userLocation: LatandLong) {
+    val sharedPreferences = context.getSharedPreferences("UserLocation", Context.MODE_PRIVATE)
+    val editor = sharedPreferences.edit()
+    editor.putFloat("latitude", userLocation.latitude.toFloat())
+    editor.putFloat("longitude", userLocation.longitude.toFloat())
+    editor.apply()
+}
+
+fun uploadImageToFirebase(
+    imageUri: Uri,
+    userId: String,
+    updateProfilePicture: (String) -> Unit,
+    context: Context,
+    onUploadSuccess: (Any?) -> Unit,
+    onUploadFailure: () -> Unit ) {
+    val storageRef = FirebaseStorage.getInstance().reference.child("profileImages/$userId.jpg")
+    storageRef.putFile(imageUri).addOnSuccessListener {uploadTask->
+        storageRef.downloadUrl.addOnSuccessListener { uri ->
+            val imageUrl = uri.toString()
+            updateProfilePicture(imageUrl)
+        }
+    }.addOnFailureListener {
+        Toast.makeText(context,"Upload failed",Toast.LENGTH_SHORT).show()
+    }
+
+}
+
+suspend fun retrieveImageFromFirebase(imageUrl: Any?): ByteArray? {
+    return withContext(Dispatchers.IO) {
+        try {
+            val storage = FirebaseStorage.getInstance()
+            val imageRef = storage.getReferenceFromUrl(imageUrl.toString())
+            val localFile = File.createTempFile("temp_image", "jpg")
+            imageRef.getFile(localFile).await()
+
+            localFile.readBytes()
+        } catch (e: Exception) {
+            e.printStackTrace()
+            null
+        }
+    }
+}
 
 @Composable
 fun ProfileScreen(
@@ -229,17 +259,32 @@ fun ProfileScreen(
     userLocation: LatandLong,
     context: Context
 ) {
-    var imageUri by remember {
-        mutableStateOf<String?>(null)
+    var imageUri by rememberSaveable {
+        mutableStateOf(userData?.profilePictureUrl)
     }
     val imagePickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
     ) { uri: Uri? ->
         uri?.let {
             imageUri = it.toString()
-            uploadImageToFirebase(it, userData?.userId ?: "", updateProfilePicture)
+            uploadImageToFirebase(
+                imageUri = uri,
+                userId = userData?.userId ?: "",
+                context = context,
+                updateProfilePicture = { imageUrl ->
+                    imageUri = imageUrl
+                    updateProfilePicture(imageUrl)
+                },
+                onUploadSuccess = {
+                    Toast.makeText(context, "Upload successful", Toast.LENGTH_SHORT).show()
+                },
+             onUploadFailure = {
+                Toast.makeText(context, "Upload failed", Toast.LENGTH_SHORT).show()
+            }
+            )
         }
     }
+
 
 
     Column(
@@ -250,16 +295,20 @@ fun ProfileScreen(
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
 
+
         if (userData?.profilePictureUrl != null) {
             AsyncImage(
 
-                model = imageUri,
+                model = imageUri?:"",
                 contentDescription = "Profile picture",
                 modifier = Modifier
                     .size(150.dp)
                     .clip(CircleShape),
                 contentScale = ContentScale.Crop
             )
+            LaunchedEffect(Unit) {
+                retrieveImageFromFirebase(imageUri)
+            }
             Spacer(modifier = Modifier.height(16.dp))
         }
         if (userData?.username != null) {
@@ -271,7 +320,7 @@ fun ProfileScreen(
             )
             Spacer(modifier = Modifier.height(16.dp))
         }
-//
+
         Button(onClick = {
             imagePickerLauncher.launch("image/*")
         }) {
@@ -283,7 +332,11 @@ fun ProfileScreen(
             Text(text = "Sign Out")
 
         }
-val readableLocation = getReadableLocation(userLocation.latitude,userLocation.longitude,context)
+        val readableLocation =
+            getReadableLocation(userLocation.latitude, userLocation.longitude, context)
+        LaunchedEffect(userLocation) {
+            saveUserLocation(context, userLocation)
+        }
         Text(
             text = "Your Location: $readableLocation",
             fontSize = 12.sp,
@@ -295,15 +348,6 @@ val readableLocation = getReadableLocation(userLocation.latitude,userLocation.lo
 }
 
 
-fun uploadImageToFirebase(imageUri: Uri, userId: String, updateProfilePicture: (String) -> Unit) {
-    val storageRef = FirebaseStorage.getInstance().reference.child("profileImages/$userId.jpg")
-    storageRef.putFile(imageUri).addOnSuccessListener {
-        storageRef.downloadUrl.addOnSuccessListener { uri ->
-            val imageUrl = uri.toString()
-            updateProfilePicture(imageUrl)
-        }
-    }
-}
 
 
 //@Preview
