@@ -1,6 +1,6 @@
 # Music Player
 
-This is a music player 
+This is a music player app built with Jetpack Compose.
 
 https://github.com/KrishVerma7/VibeSync-2.0/assets/100028624/d1eaabe3-0661-4200-b33a-543000f409d6
 
