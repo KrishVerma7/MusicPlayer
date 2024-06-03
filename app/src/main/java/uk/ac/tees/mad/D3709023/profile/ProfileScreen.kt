@@ -147,18 +147,18 @@ fun stopLocationUpdate() {
 @SuppressLint("MissingPermission")
 fun locationUpdate() {
     CoroutineScope(Dispatchers.IO).launch {
-        locationProvider.lastLocation.addOnSuccessListener{location->
-            location?.let{
-                Log.d("LOCATION_TAG","last known location: ${location.longitude}")
+        locationProvider.lastLocation.addOnSuccessListener { location ->
+            location?.let {
+                Log.d("LOCATION_TAG", "last known location: ${location.longitude}")
             }
-        }.addOnFailureListener{
-            Log.e("LOCATION_TAG","Failed to fetch last location: ${it.message}")
+        }.addOnFailureListener {
+            Log.e("LOCATION_TAG", "Failed to fetch last location: ${it.message}")
         }
     }
 
-    val locationRequest:LocationRequest = LocationRequest.create().apply {
+    val locationRequest: LocationRequest = LocationRequest.create().apply {
         interval = TimeUnit.SECONDS.toMillis(10)
-        fastestInterval= TimeUnit.SECONDS.toMillis(5)
+        fastestInterval = TimeUnit.SECONDS.toMillis(5)
         maxWaitTime = TimeUnit.MINUTES.toMillis(1)
         priority = LocationRequest.PRIORITY_HIGH_ACCURACY
     }
@@ -170,9 +170,9 @@ fun locationUpdate() {
                 locationCallback,
                 Looper.getMainLooper()
             ).await()
-            Log.d("LOCATION_TAG","Location updates started.")
-        }catch (e:Exception){
-            Log.e("LOCATION_TAG","Exception setting up location updates: ${e.message}")
+            Log.d("LOCATION_TAG", "Location updates started.")
+        } catch (e: Exception) {
+            Log.e("LOCATION_TAG", "Exception setting up location updates: ${e.message}")
             e.printStackTrace()
         }
     }
@@ -221,28 +221,30 @@ fun uploadImageToFirebase(
     updateProfilePicture: (String) -> Unit,
     context: Context,
     onUploadSuccess: (Any?) -> Unit,
-    onUploadFailure: () -> Unit ) {
+    onUploadFailure: () -> Unit
+) {
     val storageRef = FirebaseStorage.getInstance().reference.child("profileImages/$userId.jpg")
-    storageRef.putFile(imageUri).addOnSuccessListener {uploadTask->
+    storageRef.putFile(imageUri).addOnSuccessListener { uploadTask ->
         storageRef.downloadUrl.addOnSuccessListener { uri ->
             val imageUrl = uri.toString()
             updateProfilePicture(imageUrl)
         }
     }.addOnFailureListener {
-        Toast.makeText(context,"Upload failed",Toast.LENGTH_SHORT).show()
+        Toast.makeText(context, "Upload failed", Toast.LENGTH_SHORT).show()
     }
 
 }
 
-suspend fun retrieveImageFromFirebase(imageUrl: Any?): ByteArray? {
+suspend fun retrieveImageFromFirebase(imageUrl: Any?): String? {
     return withContext(Dispatchers.IO) {
         try {
             val storage = FirebaseStorage.getInstance()
             val imageRef = storage.getReferenceFromUrl(imageUrl.toString())
             val localFile = File.createTempFile("temp_image", "jpg")
             imageRef.getFile(localFile).await()
-
             localFile.readBytes()
+            imageRef.downloadUrl.await().toString()
+
         } catch (e: Exception) {
             e.printStackTrace()
             null
@@ -262,6 +264,16 @@ fun ProfileScreen(
     var imageUri by rememberSaveable {
         mutableStateOf(userData?.profilePictureUrl)
     }
+
+    var imageByteArray by rememberSaveable {
+        mutableStateOf<ByteArray?>(null)
+    }
+    LaunchedEffect(Unit) {
+//        imageByteArray = retrieveImageFromFirebase(imageUri)
+        imageUri = retrieveImageFromFirebase(imageUri)
+        Log.d("Image", "retrieving image $imageByteArray")
+    }
+
     val imagePickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
     ) { uri: Uri? ->
@@ -278,14 +290,12 @@ fun ProfileScreen(
                 onUploadSuccess = {
                     Toast.makeText(context, "Upload successful", Toast.LENGTH_SHORT).show()
                 },
-             onUploadFailure = {
-                Toast.makeText(context, "Upload failed", Toast.LENGTH_SHORT).show()
-            }
+                onUploadFailure = {
+                    Toast.makeText(context, "Upload failed", Toast.LENGTH_SHORT).show()
+                }
             )
         }
     }
-
-
 
     Column(
         modifier = Modifier
@@ -295,22 +305,43 @@ fun ProfileScreen(
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
 
-
-        if (userData?.profilePictureUrl != null) {
+        if (imageByteArray != null) {
             AsyncImage(
 
-                model = imageUri?:"",
+                model = imageByteArray ?: "",
                 contentDescription = "Profile picture",
                 modifier = Modifier
                     .size(150.dp)
                     .clip(CircleShape),
                 contentScale = ContentScale.Crop
             )
-            LaunchedEffect(Unit) {
-                retrieveImageFromFirebase(imageUri)
+        } else {
+            if (userData?.profilePictureUrl != null) {
+                AsyncImage(
+
+                    model = imageUri ?: "",
+                    contentDescription = "Profile picture",
+                    modifier = Modifier
+                        .size(150.dp)
+                        .clip(CircleShape),
+                    contentScale = ContentScale.Crop
+                )
             }
-            Spacer(modifier = Modifier.height(16.dp))
+            if (userData?.profilePictureUrl != null) {
+//        AsyncImage(
+//
+//            model = imageUri ?: "",
+//            contentDescription = "Profile picture",
+//            modifier = Modifier
+//                .size(150.dp)
+//                .clip(CircleShape),
+//            contentScale = ContentScale.Crop
+//        )
+//
+                Spacer(modifier = Modifier.height(16.dp))
+            }
         }
+
         if (userData?.username != null) {
             Text(
                 text = userData.username,
@@ -344,10 +375,7 @@ fun ProfileScreen(
             modifier = Modifier.padding(horizontal = 16.dp, vertical = 5.dp)
         )
     }
-
 }
-
-
 
 
 //@Preview
